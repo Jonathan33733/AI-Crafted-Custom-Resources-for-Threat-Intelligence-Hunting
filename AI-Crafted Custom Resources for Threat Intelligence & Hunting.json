@@ -1,0 +1,1194 @@
+{
+  "name": "AI-Crafted Custom Resources for Threat Intelligence & Hunting",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        48,
+        432
+      ],
+      "id": "91890304-1d64-446e-ad8a-e719dc17b6bb",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "=https://r.jina.ai/{{ $json['[\\'url (todays news)\\']'] }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        864
+      ],
+      "id": "b0c16820-0f03-47ab-9657-a7f18d7641bc",
+      "name": "Jina.ai ",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VT1NO8GlogZ7FXgQ",
+          "name": "jina ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k",
+          "mode": "list",
+          "cachedResultName": "threat intel and news",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "threat intel",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.title }}",
+            "Webite": "={{ $json.url }}",
+            "Access Time": "={{ $json.published_time }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Access Time",
+              "displayName": "Access Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Webite",
+              "displayName": "Webite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3312,
+        816
+      ],
+      "id": "3cc70521-5831-43c5-a753-0ea1685492bc",
+      "name": "Append row in threat intel",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "spiKuahFLmWDiGz3",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f92c75f6-6f33-4a21-b9da-95a270774161",
+              "name": "website",
+              "value": "https://thehackernews.com/",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        432
+      ],
+      "id": "ca93a2ee-ec34-4306-94a5-d078cf55b7ff",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.website }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        432
+      ],
+      "id": "8802162c-d9c0-406c-9e8d-291f03d0c9bb",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawData = $input.first().json.data;\n\n// Step 1: Split by \"Title:\" to separate articles\nlet articles = rawData.split(/Title:/).map(s => s.trim()).filter(Boolean);\n\nconst parsedArticles = articles.map(article => {\n  // Extract title - everything before the first newline (usually title ends at the first newline)\n  const titleMatch = article.match(/^(.*?)\\n/i);\n  const title = titleMatch ? titleMatch[1].trim() : '';\n\n  // Extract URL Source line\n  const urlMatch = article.match(/URL Source:\\s*(.*?)\\n/i);\n  const url = urlMatch ? urlMatch[1].trim() : '';\n\n  // Extract Published Time line\n  const publishedTimeMatch = article.match(/Published Time:\\s*(.*?)\\n/i);\n  const published_time = publishedTimeMatch ? publishedTimeMatch[1].trim() : '';\n\n  // Extract Markdown Content everything after \"Markdown Content:\"\n  const markdownMatch = article.match(/Markdown Content:\\s*([\\s\\S]*)/i);\n  const markdown_content = markdownMatch ? markdownMatch[1].trim() : '';\n\n  return {\n    title,\n    url,\n    published_time,\n    markdown_content\n  };\n});\n\n// Remove duplicates based on URL\nconst uniqueArticles = [];\nconst seen = new Set();\nfor (const art of parsedArticles) {\n  if (!seen.has(art.url)) {\n    seen.add(art.url);\n    uniqueArticles.push(art);\n  }\n}\n\n// Return as separate items\nreturn uniqueArticles.map(a => ({ json: a }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        864
+      ],
+      "id": "678cfd11-9912-4e97-a310-18f1fa0f49dd",
+      "name": "organize unstructured data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.cleaned_text || $input.first().json.markdown_content || '';\n\nconst indicators = {\n  domains: [],\n  urls: [],\n  ips: [],\n  file_hashes: [],\n  emails: [],             // emails ignored for hasIndicators\n  malware_exploits: [],   // only full CVE IDs\n  threat_hunting_keywords: []  // exclude 'CVE' keyword entirely\n};\n\nconst domainRegex = /\\b[a-z0-9\\-]+(?:\\[\\.\\]|\\.)(?:[a-z0-9\\-]+\\.)+[a-z]{2,}\\b/gi;\nconst urlRegex = /\\bhttps?:\\/\\/[^\\s]+/gi;\nconst ipRegex = /\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b/g;\nconst md5Regex = /\\b[a-f0-9]{32}\\b/gi;\nconst sha1Regex = /\\b[a-f0-9]{40}\\b/gi;\nconst sha256Regex = /\\b[a-f0-9]{64}\\b/gi;\nconst cveRegex = /\\bCVE-\\d{4}-\\d{4,7}\\b/gi;\n\n// Threat hunting keywords WITHOUT 'CVE'\nconst threatHuntingKeywords = [\n  'IOC', 'indicator of compromise', 'APT', 'threat hunting',\n  'malware', 'phishing', 'exploit', 'ransomware', 'lateral movement',\n  'TTP', 'MITRE ATT&CK', 'exfiltration', 'payload', 'malicious'\n];\n\nfunction normalizeHash(hash) {\n  return hash.toLowerCase();\n}\n\nlet match;\n\n// Extract domains\nwhile ((match = domainRegex.exec(text)) !== null) {\n  indicators.domains.push(match[0]);\n}\n\n// Extract URLs\nwhile ((match = urlRegex.exec(text)) !== null) {\n  indicators.urls.push(match[0]);\n}\n\n// Extract IPs\nwhile ((match = ipRegex.exec(text)) !== null) {\n  indicators.ips.push(match[0]);\n}\n\n// Extract hashes\nwhile ((match = md5Regex.exec(text)) !== null) {\n  indicators.file_hashes.push({ type: 'MD5', hash: normalizeHash(match[0]) });\n}\nwhile ((match = sha1Regex.exec(text)) !== null) {\n  indicators.file_hashes.push({ type: 'SHA1', hash: normalizeHash(match[0]) });\n}\nwhile ((match = sha256Regex.exec(text)) !== null) {\n  indicators.file_hashes.push({ type: 'SHA256', hash: normalizeHash(match[0]) });\n}\n\n// Extract full CVE IDs ONLY\nwhile ((match = cveRegex.exec(text)) !== null) {\n  indicators.malware_exploits.push(match[0]);\n}\n\n// Extract threat hunting keywords except 'CVE'\nthreatHuntingKeywords.forEach(keyword => {\n  const regex = new RegExp(`\\\\b${keyword}\\\\b`, 'i');\n  if (regex.test(text) && !indicators.threat_hunting_keywords.includes(keyword)) {\n    indicators.threat_hunting_keywords.push(keyword);\n  }\n});\n\n// IMPORTANT: hasIndicators is TRUE only if there's at least one full CVE ID\nconst hasIndicators = indicators.malware_exploits.length > 0;\n\nreturn [\n  {\n    json: {\n      title: $input.first().json.title || null,\n      url: $input.first().json.url || null,\n      published_time: $input.first().json.published_time || null,\n      cleaned_text: text,\n      has_indicators: hasIndicators,\n      indicators\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        864
+      ],
+      "id": "284ec2b9-ab67-4aa9-b65b-4a48aa8bc5a9",
+      "name": "Is the clean text good to go"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k",
+          "mode": "list",
+          "cachedResultName": "threat intel and news",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1422322145,
+          "mode": "list",
+          "cachedResultName": "news",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit#gid=1422322145"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.title }}",
+            "URL": "={{ $json.url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1216,
+        672
+      ],
+      "id": "8d3a6a62-7ad1-4a19-a47d-14d5640f0588",
+      "name": "Append row in news",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "spiKuahFLmWDiGz3",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cae9ea6e-0cf7-4d97-9c90-45a72f8af2f5",
+              "leftValue": "={{ $json.has_indicators }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "11c2fa3f-af29-4a4b-80c5-94d36b1295a7",
+              "leftValue": "={{ $json.cleaned_text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1264,
+        864
+      ],
+      "id": "6b2f3942-59ec-4c67-983e-7315bf40c29b",
+      "name": "If (checking if its true)"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "title, published_time, url, cleaned_text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        464
+      ],
+      "id": "dbceba61-1584-42be-a5ef-789338f1cd69",
+      "name": "Split Out away from confirming result"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1456,
+        880
+      ],
+      "id": "bc9d471a-70ab-495f-8272-75d85c418cba",
+      "name": "Wait (1 sec)",
+      "webhookId": "4b94a93c-4418-4e25-b69c-80f3edd7d049"
+    },
+    {
+      "parameters": {
+        "batchSize": "=1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        80,
+        848
+      ],
+      "id": "4ce66151-b5d8-4c2e-a9a5-c3590d40d7af",
+      "name": "Loop Over"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title (todays news)",
+              "cssSelector": "h2.home-title",
+              "returnArray": true
+            },
+            {
+              "key": "url (todays news)",
+              "cssSelector": "a.story-link",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            },
+            {
+              "key": "category (todays news)",
+              "cssSelector": "span.h-tags",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        432
+      ],
+      "id": "b5c975c7-14a7-46ff-9bbf-f1a7b4f49270",
+      "name": "Collecting latest news 1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "['title (todays news)'], ['url (todays news)'], ['category (todays news)']",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        800,
+        432
+      ],
+      "id": "6efc1c5d-2977-4ab7-ab3a-bf640f3fcb80",
+      "name": "Split Out todays news 1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1056,
+        448
+      ],
+      "id": "01b11eb9-043d-46cf-acea-29eee180fdd1",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k",
+          "mode": "list",
+          "cachedResultName": "threat intel and news",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1422322145,
+          "mode": "list",
+          "cachedResultName": "news",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit#gid=1422322145"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        224,
+        656
+      ],
+      "id": "99ea7b13-ee95-4cb5-8d67-a8fc15c74477",
+      "name": "Get row(s) in news sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "spiKuahFLmWDiGz3",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "URL",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        656
+      ],
+      "id": "9b647cb7-b90c-4f04-8f1d-1b6763456adf",
+      "name": "Take the info from news sheet"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "['title (todays news)'], ['url (todays news)']",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        448
+      ],
+      "id": "37e59f0e-3df3-4bcd-9fc7-e307f9089173",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// Separate today's news items and URL items\nconst todaysNewsItems = [];\nconst urlItems = [];\n\nallItems.forEach(item => {\n  if (item.json[\"['url (todays news)']\"]) {\n    todaysNewsItems.push(item);\n  } else if (item.json.URL && item.json.URL !== \"URL\") {\n    urlItems.push(item);\n  }\n});\n\nconsole.log(`Today's news items: ${todaysNewsItems.length}`);\nconsole.log(`URL items: ${urlItems.length}`);\n\nconst uniqueItems = [];\n\nfor (let i = 0; i < todaysNewsItems.length; i++) {\n  const newsItem = todaysNewsItems[i];\n  const newsUrl = String(newsItem.json[\"['url (todays news)']\"]).trim().toLowerCase();\n\n  console.log(`\\nChecking news item ${i + 1}: ${newsUrl}`);\n\n  let foundMatch = false;\n\n  for (let j = 0; j < urlItems.length; j++) {\n    const urlItem = urlItems[j];\n    const existingUrl = String(urlItem.json.URL).trim().toLowerCase();\n\n    console.log(`  Comparing with URL ${j + 1}: ${existingUrl}`);\n\n    if (newsUrl === existingUrl) {\n      console.log(`  ✅ MATCH FOUND!`);\n      foundMatch = true;\n      break;\n    }\n  }\n\n  if (!foundMatch) {\n    console.log(`  ❌ NO MATCH - ADDING TO OUTPUT`);\n    uniqueItems.push({\n      json: {\n        \"['title (todays news)']\": newsItem.json[\"['title (todays news)']\"],\n        \"['url (todays news)']\": newsItem.json[\"['url (todays news)']\"],\n        \"['category (todays news)']\": newsItem.json[\"['category (todays news)']\"]\n      }\n    });\n  } else {\n    console.log(`  ⏭️ MATCH FOUND - SKIPPING`);\n  }\n}\n\nconsole.log(`\\nFinal output count: ${uniqueItems.length}`);\n\nreturn uniqueItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        448
+      ],
+      "id": "75e006d1-15b3-4a5c-afcd-be13069a98f2",
+      "name": "Remove repeated news"
+    },
+    {
+      "parameters": {
+        "jsCode": "const markdown = $input.first().json.markdown_content || '';\nconst lines = markdown.split('\\n');\n\n// Footer / boilerplate indicators that mark lines to exclude entirely\nconst excludeLineKeywords = [\n  'Follow us on',\n  'Found this article interesting?',\n  'Subscribe – Get Latest News',\n  'Home',\n  'Newsletter',\n  'Webinars',\n  'Expert Insights',\n  'Contact',\n  'Resources',\n  'About THN',\n  'Jobs',\n  'Advertise with us',\n  'Contact/Tip Us',\n  'RSS Feeds',\n  'Email Alerts',\n  'javascript:void(0)',\n  'blob:http://localhost',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '__',\n  '__', \n  '__',\n  '__',\n  '__',\n  '__',\n  '__',\n  '===============',\n  '==========================================================================================================================================================================',\n  '---------------------------------------------------------------',\n];\n\n// Domains to block for URLs inside lines (remove URLs containing these domains)\nconst blockedDomains = [\n  'blogger.googleusercontent.com',\n  'blogger.com',\n];\n\n// Remove markdown images\nfunction removeImages(line) {\n  return line.replace(/\\[!\\[.*?\\]\\(.*?\\)\\]\\(.*?\\)/g, '').replace(/!\\[.*?\\]\\(.*?\\)/g, '');\n}\n\n// Convert markdown links [text](url) to just text\nfunction removeLinks(line) {\n  return line.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '$1');\n}\n\n// Remove URLs from blocked domains inside the line\nfunction removeBlockedUrls(line) {\n  return line.replace(/https?:\\/\\/[^\\s)]+/g, url => {\n    for (const domain of blockedDomains) {\n      if (url.includes(domain)) return ''; // remove URL completely\n    }\n    return url; // keep other URLs\n  }).replace(/\\s{2,}/g, ' ').trim();\n}\n\nconst filteredLines = [];\n\nfor (let line of lines) {\n  line = line.trim();\n\n  if (!line) {\n    // Treat empty line as paragraph separator, keep it\n    filteredLines.push('');\n    continue;\n  }\n\n  if (excludeLineKeywords.some(keyword => line.includes(keyword))) {\n    continue; // skip excluded lines\n  }\n\n  line = removeImages(line);\n  line = removeLinks(line);\n  line = removeBlockedUrls(line);\n\n  if (line.length > 0) {\n    filteredLines.push(line);\n  }\n}\n\n// Now join lines into a single string, replacing all single \\n with space to remove line breaks *inside* paragraphs\n// and keeping double \\n\\n as paragraph breaks.\n\n// To do this, first join by '\\n' so paragraphs are separated by empty lines,\n// then replace all remaining single newlines inside paragraphs with spaces.\n\n// We'll do this by joining with '\\n', then replacing any '\\n' that is NOT part of double '\\n\\n' with space.\n\nlet cleanedContent = filteredLines.join('\\n');\n\n// Replace all single \\n (not double) with space\ncleanedContent = cleanedContent.replace(/([^\\n])\\n([^\\n])/g, '$1 $2');\n\n// Finally trim\ncleanedContent = cleanedContent.trim();\n\nreturn [{\n  json: {\n    title: $input.first().json.title,\n    url: $input.first().json.url,\n    published_time: $input.first().json.published_time,\n    cleaned_text: cleanedContent,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        864
+      ],
+      "id": "def60e15-2580-4e14-ab70-e245beb1372f",
+      "name": "Cleaning the content 1"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $input.first().json.cleaned_text || '';\n\n// 1. Remove footer/news block starting from unique footer marker onwards\nconst footerMarker = '\\n\\n__ Share';\nconst footerIndex = text.indexOf(footerMarker);\nif (footerIndex !== -1) {\n  text = text.slice(0, footerIndex);\n}\n\n// 2. Split text into lines for filtering\nconst lines = text.split('\\n');\n\n// Define lines to exclude entirely\nconst excludeLineKeywords = [\n  'Follow us on',\n  'Found this article interesting?',\n  'Subscribe – Get Latest News',\n  'Home',\n  'Newsletter',\n  'Webinars',\n  'Expert Insights',\n  'Contact',\n  'Resources',\n  'About THN',\n  'Jobs',\n  'Advertise with us',\n  'Contact/Tip Us',\n  'RSS Feeds',\n  'Email Alerts',\n  'javascript:void(0)',\n  'blob:http://localhost',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '[__]',\n  '__',\n  '__', \n  '__',\n  '__',\n  '__',\n  '__',\n  '__',\n  '===============',\n  '==========================================================================================================================================================================',\n  '---------------------------------------------------------------',\n];\n\n// Domains to block URLs for removal\nconst blockedDomains = [\n  'blogger.googleusercontent.com',\n  'blogger.com',\n];\n\n// Helper to remove markdown images\nfunction removeImages(line) {\n  return line.replace(/\\[!\\[.*?\\]\\(.*?\\)\\]\\(.*?\\)/g, '').replace(/!\\[.*?\\]\\(.*?\\)/g, '');\n}\n\n// Helper to convert markdown links [text](url) -> text only\nfunction removeLinks(line) {\n  return line.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '$1');\n}\n\n// Remove URLs from blocked domains inside a line\nfunction removeBlockedUrls(line) {\n  return line.replace(/https?:\\/\\/[^\\s)]+/g, url => {\n    for (const domain of blockedDomains) {\n      if (url.includes(domain)) return ''; // remove URL entirely\n    }\n    return url; // keep other URLs\n  }).replace(/\\s{2,}/g, ' ').trim();\n}\n\nconst filteredLines = [];\n\nfor (let line of lines) {\n  line = line.trim();\n\n  if (!line) {\n    // Empty line means paragraph break — keep it\n    filteredLines.push('');\n    continue;\n  }\n\n  // Skip lines containing excluded keywords\n  if (excludeLineKeywords.some(keyword => line.includes(keyword))) {\n    continue;\n  }\n\n  line = removeImages(line);\n  line = removeLinks(line);\n  line = removeBlockedUrls(line);\n\n  if (line.length > 0) {\n    filteredLines.push(line);\n  }\n}\n\n// Join filtered lines with '\\n' preserving paragraphs (empty lines),\n// then replace all single '\\n' (not double) inside paragraphs with spaces\nlet cleanedContent = filteredLines.join('\\n');\ncleanedContent = cleanedContent.replace(/([^\\n])\\n([^\\n])/g, '$1 $2').trim();\n\nreturn [{\n  json: {\n    title: $input.first().json.title,\n    url: $input.first().json.url,\n    published_time: $input.first().json.published_time,\n    cleaned_text: cleanedContent,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        864
+      ],
+      "id": "d9e0a5b1-0e50-4616-9824-539ddcf8923b",
+      "name": "Cleaning the content 2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $input.first().json.output || '';\n\n// Regex to match either ```kql ... ``` or ``` ... ```\nconst kqlRegex = /```(?:kql)?([\\s\\S]*?)```/g;\n\nconst kqlQueries = [];\nlet match;\n\nwhile ((match = kqlRegex.exec(rawText)) !== null) {\n  // Clean up the query: trim spaces and remove comment lines starting with //\n  let query = match[1]\n    .split('\\n')\n    .map(line => line.trim())\n    .filter(line => line && !line.startsWith('//'))\n    .join(' | ')\n    .replace(/\\s*\\|\\s*\\|\\s*/g, ' | ') // fix duplicated pipes if any\n    .trim();\n\n  kqlQueries.push(query);\n}\n\nreturn [{ json: { kql_queries: kqlQueries.length ? kqlQueries : null } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        1056
+      ],
+      "id": "04bf8878-fe21-4f06-96f1-b8834c335a38",
+      "name": "separating unstructured custom KQL data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $input.first().json.output || '';\n\n// Try to find the SIEM Security Use Cases section (optional fallback)\nconst startIndex = rawText.indexOf('**SIEM Security Use Cases**');\nconst siemText = startIndex >= 0 ? rawText.slice(startIndex) : rawText;\n\n// Split by categories — look for lines starting with \"**N. Title**\"\nconst categorySplitRegex = /^\\*\\*(\\d+)\\.\\s*(.+?)\\*\\*/gm;\n\nlet categories = [];\nlet lastIndex = 0;\nlet match;\n\n// Gather categories with their text blocks\nwhile ((match = categorySplitRegex.exec(siemText)) !== null) {\n  const index = match.index;\n  if (categories.length > 0) {\n    categories[categories.length - 1].content = siemText.slice(lastIndex, index).trim();\n  }\n  categories.push({ \n    number: match[1], \n    name: match[2], \n    content: '' \n  });\n  lastIndex = categorySplitRegex.lastIndex;\n}\nif (categories.length > 0) {\n  categories[categories.length - 1].content = siemText.slice(lastIndex).trim();\n}\n\n// Original extraction function (ID or ID + Desc)\nfunction extractMitreTechniquesOriginal(text) {\n  const mitreRegex = /\\b(T\\d{4}(?:\\.\\d+)?|PRIV\\.\\d{3,}|ACTIVEDIRECTORY\\.\\d{3,})(?:\\s*\\(([^)]+)\\))?/g;\n  const results = [];\n  let m;\n  while ((m = mitreRegex.exec(text)) !== null) {\n    const id = m[1];\n    const desc = m[2];\n    results.push(desc ? `${id} (${desc.trim()})` : id);\n  }\n  return results;\n}\n\n// Reverse extraction function (Desc + ID)\nfunction extractMitreTechniquesReverse(text) {\n  const reverseRegex = /([A-Za-z\\s\\-]+)\\s*\\((T\\d{4}(?:\\.\\d+)?|PRIV\\.\\d{3,}|ACTIVEDIRECTORY\\.\\d{3,})\\)/g;\n  const results = [];\n  let m;\n  while ((m = reverseRegex.exec(text)) !== null) {\n    const desc = m[1].trim();\n    const id = m[2];\n    results.push(`${id} (${desc})`);\n  }\n  return results;\n}\n\n// Combine and deduplicate ALL found techniques\nfunction extractMitreTechniquesCombined(text) {\n  const resultsOriginal = extractMitreTechniquesOriginal(text);\n  const resultsReverse = extractMitreTechniquesReverse(text);\n  const combined = [...resultsOriginal, ...resultsReverse];\n  if (combined.length === 0) return null;\n\n  // Use a Set to remove duplicates regardless of parentheses\n  const seen = new Set();\n  const deduped = [];\n  for (const item of combined) {\n    // Normalize for dedupe: lowercase and remove spaces/punctuation differences if needed\n    const normalized = item.toLowerCase().replace(/\\s+/g, '');\n    if (!seen.has(normalized)) {\n      seen.add(normalized);\n      deduped.push(item);\n    }\n  }\n  return deduped;\n}\n\n// Build results\nconst mitreByCategory = categories.map(cat => {\n  let mitreTechs = null;\n\n  const mitreLineMatch = cat.content.match(/MITRE:\\s*([^\\n]+)/i);\n  if (mitreLineMatch) {\n    mitreTechs = extractMitreTechniquesCombined(mitreLineMatch[1]);\n  }\n\n  if (!mitreTechs) {\n    mitreTechs = extractMitreTechniquesCombined(cat.content);\n  }\n\n  return {\n    category: `${cat.number}. ${cat.name}`,\n    mitre_techniques: mitreTechs || []\n  };\n});\n\n// Fallback for no categories found\nif (mitreByCategory.length === 0) {\n  const allMitre = extractMitreTechniquesCombined(rawText);\n  return [{ json: { mitre_by_category: [{ category: \"All\", mitre_techniques: allMitre || [] }] } }];\n}\n\nreturn [{ json: { mitre_by_category: mitreByCategory } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        912
+      ],
+      "id": "ba3e7d59-a231-4f49-8c72-76a856dcfb77",
+      "name": "mitre"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $input.first().json.output || '';\n\nconst descriptions = [];\nconst regex = /Description:\\s*([^.\\n]+\\.)/g;\nlet match;\n\nwhile ((match = regex.exec(rawText)) !== null) {\n  descriptions.push(match[1].trim());\n}\n\nreturn [{ json: { descriptions } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        768
+      ],
+      "id": "ccb75e8a-e85d-4441-88d7-e83dc478f557",
+      "name": "description"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $input.first().json.output || '';\n\n// Simple regex to find all numbered titles like \"**1. Title**\"\nconst titleMatches = rawText.match(/\\*\\*\\d+\\.\\s+([^*]+?)\\s*\\*\\*/g);\n\nconst validTitles = [];\n\nif (titleMatches) {\n  for (const titleMatch of titleMatches) {\n    // Extract just the title text (remove ** and number)\n    const cleanTitle = titleMatch.replace(/\\*\\*\\d+\\.\\s+/, '').replace(/\\s*\\*\\*$/, '');\n    validTitles.push(cleanTitle);\n  }\n}\n\nreturn [{ json: { titles: validTitles.length ? validTitles : null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        624
+      ],
+      "id": "69688dd8-b7ff-499f-ace3-c4d0c9a22112",
+      "name": "title (use case)"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k",
+          "mode": "list",
+          "cachedResultName": "threat intel and news",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 754295201,
+          "mode": "list",
+          "cachedResultName": "AI Threat Use Case/KQL",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QpxkcyGJ8MNjFj5NQGB2ypA_NikGAqGiO0JtWAyRV0k/edit#gid=754295201"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "News Title": "={{ $json.title }}",
+            "Content": "={{ $json.cleaned_text }}",
+            "Access Time": "={{ $json.published_time }}",
+            "use case title": "={{ $json.titles }}",
+            "Description": "={{ $json.descriptions }}",
+            "MITRE ATT&CK": "={{ $json.mitre_by_category }}",
+            "KQL Queries": "={{ $json.kql_queries }}",
+            "AI Content": "={{ $json.output }}"
+          },
+          "matchingColumns": [
+            "Title"
+          ],
+          "schema": [
+            {
+              "id": "News Title",
+              "displayName": "News Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Access Time",
+              "displayName": "Access Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Content",
+              "displayName": "AI Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "use case title",
+              "displayName": "use case title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "MITRE ATT&CK",
+              "displayName": "MITRE ATT&CK",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "KQL Queries",
+              "displayName": "KQL Queries",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3328,
+        1072
+      ],
+      "id": "e555286a-85ba-47eb-8bc6-305541ed9ba5",
+      "name": "Append row in AI Threat Use Case/KQL",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "spiKuahFLmWDiGz3",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2496,
+        976
+      ],
+      "id": "a5184407-a801-4a22-b0d1-6e26ba148cd6",
+      "name": "Merge 3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2912,
+        688
+      ],
+      "id": "213b187f-2714-44fa-876a-621253e0b0fb",
+      "name": "Merge 5"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2496,
+        704
+      ],
+      "id": "b1b5a119-f26b-443a-b6ba-ca42c2a811b7",
+      "name": "Merge 2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2320,
+        464
+      ],
+      "id": "484db2c0-b477-46c3-a975-b037f57b23c3",
+      "name": "Merge 1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2640,
+        832
+      ],
+      "id": "4048e973-e405-4d0c-b766-b338eb9758ce",
+      "name": "Merge 4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert threat hunter and Microsoft Sentinel analyst.\n\nGiven the cybersecurity threat intelligence report below, perform the following:\n\nExtract key attack phases, TTPs, and IOCs (domains, IPs, file hashes, emails, malware names).\n\nCreate detailed SIEM Security Use Cases describing what to detect, triggers (logs/events), and map to MITRE ATT&CK techniques.\n\nFor each IOC category and use case, generate multiple actionable Microsoft Sentinel KQL queries that:\n\nMatch specific IOCs\n\nDetect anomalous or suspicious behavior related to the threat\n\nUse multiple Microsoft Sentinel tables/log sources (SigninLogs, AuditLogs, AADNonInteractiveUserSignInLogs, AADServicePrincipalSignInLogs, SecurityAlert, SecurityIncident, DeviceEvents, DeviceNetworkEvents, DeviceFileEvents, DeviceProcessEvents, DeviceRegistryEvents, DeviceImageLoadEvents, DeviceLogonEvents, CommonSecurityLog, Syslog, DnsEvents, VMConnection, OfficeActivity, EmailEvents, EmailUrlInfo, EmailAttachmentInfo, AzureActivity, AzureDiagnostics, AppTraces, AppRequests, AppDependencies, Heartbeat, Perf, Update, WireData, etc.)\n\nInclude threshold-based or time-windowed detections (e.g., multiple failed logins or DNS queries within short time)\n\nCorrelate different event types or IOC categories where relevant\n\nDetect living-off-the-land or stealth techniques (e.g., SSH enabling, reverse shell, abnormal process execution)\n\nOnly include queries that are directly runnable in Microsoft Sentinel. If a category has no IOCs, return \"null\" for that category.\n\nFormat the output as:\n\nSIEM Security Use Cases:\n\n[Use Case Name]\nDescription: ...\nTrigger: ...\nMITRE: ...\n\nKQL Queries\n\nDomains/URLs:\n<query 1>\n<query 2>\n...\n\nIP Addresses:\n<query 1>\n<query 2>\n...\n\nFile Hashes (SHA256):\n<query 1>\n...\n\nEmail Addresses:\n...\n\nMalware/Exploits:\n...\n\nHere is the threat intelligence: {{ $json.cleaned_text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        1632,
+        816
+      ],
+      "id": "2b5de0c3-8f3d-4191-aaaf-acb2246dc3ad",
+      "name": "AI Agent Threat intel (provides custom AI resources))"
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        1040
+      ],
+      "id": "8f055632-861f-4e23-a6d1-061bad14077a",
+      "name": "deepseek/deepseek-r1:free",
+      "credentials": {
+        "openRouterApi": {
+          "id": "cy2CY8IgqvVR34S7",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in news sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jina.ai ": {
+      "main": [
+        [
+          {
+            "node": "organize unstructured data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Collecting latest news 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "organize unstructured data": {
+      "main": [
+        [
+          {
+            "node": "Cleaning the content 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is the clean text good to go": {
+      "main": [
+        [
+          {
+            "node": "If (checking if its true)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in news": {
+      "main": [
+        []
+      ]
+    },
+    "If (checking if its true)": {
+      "main": [
+        [
+          {
+            "node": "Split Out away from confirming result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait (1 sec)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out away from confirming result": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Threat intel (provides custom AI resources))",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (1 sec)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Jina.ai ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collecting latest news 1": {
+      "main": [
+        [
+          {
+            "node": "Split Out todays news 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out todays news 1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Remove repeated news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in news sheet": {
+      "main": [
+        [
+          {
+            "node": "Take the info from news sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take the info from news sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Remove repeated news": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaning the content 1": {
+      "main": [
+        [
+          {
+            "node": "Cleaning the content 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaning the content 2": {
+      "main": [
+        [
+          {
+            "node": "Is the clean text good to go",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "separating unstructured custom KQL data": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "mitre": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "description": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "title (use case)": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in AI Threat Use Case/KQL": {
+      "main": [
+        [
+          {
+            "node": "Loop Over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 3": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 5": {
+      "main": [
+        [
+          {
+            "node": "Append row in threat intel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in AI Threat Use Case/KQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 2": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 1": {
+      "main": [
+        [
+          {
+            "node": "Merge 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 4": {
+      "main": [
+        [
+          {
+            "node": "Merge 5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Agent Threat intel (provides custom AI resources))": {
+      "main": [
+        [
+          {
+            "node": "title (use case)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "description",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "mitre",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "separating unstructured custom KQL data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge 1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "deepseek/deepseek-r1:free": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Threat intel (provides custom AI resources))",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1f6f57ec-3c8a-4dd1-983b-1c5d5b9ffe68",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2c38e5c257c6a0bdb452d71f7fd608202aa24f9bdb8ba4b233852650aeae2272"
+  },
+  "id": "8lnMPKTlHM34VWOI",
+  "tags": []
+}
