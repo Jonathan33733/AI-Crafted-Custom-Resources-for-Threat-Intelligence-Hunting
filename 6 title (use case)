@@ -1,0 +1,16 @@
+const rawText = $input.first().json.output || '';
+
+// Simple regex to find all numbered titles like "**1. Title**"
+const titleMatches = rawText.match(/\*\*\d+\.\s+([^*]+?)\s*\*\*/g);
+
+const validTitles = [];
+
+if (titleMatches) {
+  for (const titleMatch of titleMatches) {
+    // Extract just the title text (remove ** and number)
+    const cleanTitle = titleMatch.replace(/\*\*\d+\.\s+/, '').replace(/\s*\*\*$/, '');
+    validTitles.push(cleanTitle);
+  }
+}
+
+return [{ json: { titles: validTitles.length ? validTitles : null } }];
