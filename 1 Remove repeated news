@@ -1,0 +1,58 @@
+// Get all input items
+const allItems = $input.all();
+
+// Separate today's news items and URL items
+const todaysNewsItems = [];
+const urlItems = [];
+
+allItems.forEach(item => {
+  if (item.json["['url (todays news)']"]) {
+    todaysNewsItems.push(item);
+  } else if (item.json.URL && item.json.URL !== "URL") {
+    urlItems.push(item);
+  }
+});
+
+console.log(`Today's news items: ${todaysNewsItems.length}`);
+console.log(`URL items: ${urlItems.length}`);
+
+const uniqueItems = [];
+
+for (let i = 0; i < todaysNewsItems.length; i++) {
+  const newsItem = todaysNewsItems[i];
+  const newsUrl = String(newsItem.json["['url (todays news)']"]).trim().toLowerCase();
+
+  console.log(`\nChecking news item ${i + 1}: ${newsUrl}`);
+
+  let foundMatch = false;
+
+  for (let j = 0; j < urlItems.length; j++) {
+    const urlItem = urlItems[j];
+    const existingUrl = String(urlItem.json.URL).trim().toLowerCase();
+
+    console.log(`  Comparing with URL ${j + 1}: ${existingUrl}`);
+
+    if (newsUrl === existingUrl) {
+      console.log(`  ✅ MATCH FOUND!`);
+      foundMatch = true;
+      break;
+    }
+  }
+
+  if (!foundMatch) {
+    console.log(`  ❌ NO MATCH - ADDING TO OUTPUT`);
+    uniqueItems.push({
+      json: {
+        "['title (todays news)']": newsItem.json["['title (todays news)']"],
+        "['url (todays news)']": newsItem.json["['url (todays news)']"],
+        "['category (todays news)']": newsItem.json["['category (todays news)']"]
+      }
+    });
+  } else {
+    console.log(`  ⏭️ MATCH FOUND - SKIPPING`);
+  }
+}
+
+console.log(`\nFinal output count: ${uniqueItems.length}`);
+
+return uniqueItems;
