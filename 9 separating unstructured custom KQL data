@@ -1,0 +1,22 @@
+const rawText = $input.first().json.output || '';
+
+// Regex to match either ```kql ... ``` or ``` ... ```
+const kqlRegex = /```(?:kql)?([\s\S]*?)```/g;
+
+const kqlQueries = [];
+let match;
+
+while ((match = kqlRegex.exec(rawText)) !== null) {
+  // Clean up the query: trim spaces and remove comment lines starting with //
+  let query = match[1]
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('//'))
+    .join(' | ')
+    .replace(/\s*\|\s*\|\s*/g, ' | ') // fix duplicated pipes if any
+    .trim();
+
+  kqlQueries.push(query);
+}
+
+return [{ json: { kql_queries: kqlQueries.length ? kqlQueries : null } }];
