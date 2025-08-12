@@ -1,0 +1,11 @@
+const rawText = $input.first().json.output || '';
+
+const descriptions = [];
+const regex = /Description:\s*([^.\n]+\.)/g;
+let match;
+
+while ((match = regex.exec(rawText)) !== null) {
+  descriptions.push(match[1].trim());
+}
+
+return [{ json: { descriptions } }];
